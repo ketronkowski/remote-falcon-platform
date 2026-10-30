@@ -10,6 +10,7 @@ export const addSequenceToQueueService = (
   viewerLongitude,
   viewerId,
   locationPermission,
+  locationCode,
   callback
 ) => {
   addSequenceToQueueMutation({
@@ -24,7 +25,8 @@ export const addSequenceToQueueService = (
       latitude: parseFloat(viewerLatitude),
       longitude: parseFloat(viewerLongitude),
       viewerId,
-      locationPermission
+      locationPermission,
+      locationCode
     },
     onCompleted: (response) => {
       callback({
@@ -51,6 +53,7 @@ export const voteForSequenceService = (
   viewerLatitude,
   viewerLongitude,
   viewerId,
+  locationCode,
   callback
 ) => {
   voteForSequenceMutation({
@@ -64,7 +67,8 @@ export const voteForSequenceService = (
       name,
       latitude: parseFloat(viewerLatitude),
       longitude: parseFloat(viewerLongitude),
-      viewerId
+      viewerId,
+      locationCode
     },
     onCompleted: (response) => {
       callback({

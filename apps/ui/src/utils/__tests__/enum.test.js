@@ -26,8 +26,8 @@ describe('ViewerControlMode', () => {
 });
 
 describe('LocationCheckMethod', () => {
-  it('exposes geo / code / none modes', () => {
-    expect(LocationCheckMethod).toEqual({ GEO: 'GEO', CODE: 'CODE', NONE: 'NONE' });
+  it('exposes geo / code / geo-or-code / none modes', () => {
+    expect(LocationCheckMethod).toEqual({ GEO: 'GEO', CODE: 'CODE', GEO_OR_CODE: 'GEO_OR_CODE', NONE: 'NONE' });
   });
 });
 

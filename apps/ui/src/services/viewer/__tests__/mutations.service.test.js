@@ -25,7 +25,7 @@ describe('addSequenceToQueueService', () => {
   it('passes parsed-float coordinates, viewerId, and routes to Viewer', () => {
     const mutation = buildMutation('success');
     const callback = vi.fn();
-    addSequenceToQueueService(mutation, 'mattshow', 'Carol', '12.34', '-56.78', 'viewer-abc', 'granted', callback);
+    addSequenceToQueueService(mutation, 'mattshow', 'Carol', '12.34', '-56.78', 'viewer-abc', 'granted', null, callback);
     expect(mutation).toHaveBeenCalledTimes(1);
     const opts = mutation.mock.calls[0][0];
     expect(opts.context.headers.Route).toBe('Viewer');
@@ -35,7 +35,8 @@ describe('addSequenceToQueueService', () => {
       latitude: 12.34,
       longitude: -56.78,
       viewerId: 'viewer-abc',
-      locationPermission: 'granted'
+      locationPermission: 'granted',
+      locationCode: null
     });
   });
 
@@ -43,25 +44,31 @@ describe('addSequenceToQueueService', () => {
   // out-of-range viewer if this reaches the server on the attempt itself.
   it('forwards the location permission state', () => {
     const mutation = vi.fn();
-    addSequenceToQueueService(mutation, 's', 'n', '0', '0', 'viewer-abc', 'denied', vi.fn());
+    addSequenceToQueueService(mutation, 's', 'n', '0', '0', 'viewer-abc', 'denied', null, vi.fn());
     expect(mutation.mock.calls[0][0].variables.locationPermission).toBe('denied');
+  });
+
+  it('forwards the entered location code', () => {
+    const mutation = vi.fn();
+    addSequenceToQueueService(mutation, 's', 'n', '0', '0', 'viewer-abc', 'denied', 4321, vi.fn());
+    expect(mutation.mock.calls[0][0].variables.locationCode).toBe(4321);
   });
 
   it('forwards a null viewerId unchanged (localStorage blocked)', () => {
     const mutation = buildMutation('success');
-    addSequenceToQueueService(mutation, 's', 'n', '0', '0', null, 'prompt', vi.fn());
+    addSequenceToQueueService(mutation, 's', 'n', '0', '0', null, 'prompt', null, vi.fn());
     expect(mutation.mock.calls[0][0].variables.viewerId).toBeNull();
   });
 
   it('invokes callback with {success:true, response} on completion', () => {
     const callback = vi.fn();
-    addSequenceToQueueService(buildMutation('success'), 's', 'n', '0', '0', 'viewer-abc', 'granted', callback);
+    addSequenceToQueueService(buildMutation('success'), 's', 'n', '0', '0', 'viewer-abc', 'granted', null, callback);
     expect(callback).toHaveBeenCalledWith({ success: true, response: { ok: true } });
   });
 
   it('invokes callback with {success:false, error} on error', () => {
     const callback = vi.fn();
-    addSequenceToQueueService(buildMutation('error'), 's', 'n', '0', '0', 'viewer-abc', 'granted', callback);
+    addSequenceToQueueService(buildMutation('error'), 's', 'n', '0', '0', 'viewer-abc', 'granted', null, callback);
     expect(callback).toHaveBeenCalledWith({
       success: false,
       error: expect.objectContaining({ message: 'boom' })
@@ -72,14 +79,15 @@ describe('addSequenceToQueueService', () => {
 describe('voteForSequenceService', () => {
   it('routes to Viewer with parsed coordinates and viewerId', () => {
     const mutation = buildMutation('success');
-    voteForSequenceService(mutation, 'mattshow', 'Carol', '12', '-34', 'viewer-abc', () => {});
+    voteForSequenceService(mutation, 'mattshow', 'Carol', '12', '-34', 'viewer-abc', null, () => {});
     const opts = mutation.mock.calls[0][0];
     expect(opts.variables).toEqual({
       showSubdomain: 'mattshow',
       name: 'Carol',
       latitude: 12,
       longitude: -34,
-      viewerId: 'viewer-abc'
+      viewerId: 'viewer-abc',
+      locationCode: null
     });
     expect(opts.context.headers.Route).toBe('Viewer');
   });
@@ -90,25 +98,26 @@ describe('voteForSequenceService', () => {
   // variable set is the contract here, not a style choice.
   it('never sends locationPermission (unknown-argument breaks the vote)', () => {
     const mutation = buildMutation('success');
-    voteForSequenceService(mutation, 'mattshow', 'Carol', '12', '-34', 'viewer-abc', () => {});
+    voteForSequenceService(mutation, 'mattshow', 'Carol', '12', '-34', 'viewer-abc', null, () => {});
     expect(Object.keys(mutation.mock.calls[0][0].variables)).toEqual([
       'showSubdomain',
       'name',
       'latitude',
       'longitude',
-      'viewerId'
+      'viewerId',
+      'locationCode'
     ]);
   });
 
   it('callback receives {success:true, response} on completion', () => {
     const callback = vi.fn();
-    voteForSequenceService(buildMutation('success'), 's', 'n', '0', '0', 'viewer-abc', callback);
+    voteForSequenceService(buildMutation('success'), 's', 'n', '0', '0', 'viewer-abc', null, callback);
     expect(callback).toHaveBeenCalledWith({ success: true, response: { ok: true } });
   });
 
   it('callback receives {success:false, error} on error', () => {
     const callback = vi.fn();
-    voteForSequenceService(buildMutation('error'), 's', 'n', '0', '0', 'viewer-abc', callback);
+    voteForSequenceService(buildMutation('error'), 's', 'n', '0', '0', 'viewer-abc', null, callback);
     expect(callback.mock.calls[0][0].success).toBe(false);
     expect(callback.mock.calls[0][0].error).toBeInstanceOf(Error);
   });
