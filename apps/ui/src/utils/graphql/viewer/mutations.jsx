@@ -14,8 +14,8 @@ export const UPDATE_ACTIVE_VIEWERS = gql`
 `;
 
 export const ADD_SEQUENCE_TO_QUEUE = gql`
-  mutation AddSequenceToQueue($showSubdomain: String!, $name: String!, $latitude: Float, $longitude: Float, $viewerId: String, $locationPermission: String) @api(name: viewer) {
-    addSequenceToQueue(showSubdomain: $showSubdomain, name: $name, latitude: $latitude, longitude: $longitude, viewerId: $viewerId, locationPermission: $locationPermission)
+  mutation AddSequenceToQueue($showSubdomain: String!, $name: String!, $latitude: Float, $longitude: Float, $viewerId: String, $locationPermission: String, $locationCode: Int) @api(name: viewer) {
+    addSequenceToQueue(showSubdomain: $showSubdomain, name: $name, latitude: $latitude, longitude: $longitude, viewerId: $viewerId, locationPermission: $locationPermission, locationCode: $locationCode)
   }
 `;
 
@@ -24,7 +24,7 @@ export const ADD_SEQUENCE_TO_QUEUE = gql`
 // funnel), and GraphQL rejects unknown arguments before execution. Sending it
 // broke every voting-mode show with UnknownArgument (fixed post-#150).
 export const VOTE_FOR_SEQUENCE = gql`
-  mutation VoteForSequence($showSubdomain: String!, $name: String!, $latitude: Float, $longitude: Float, $viewerId: String) @api(name: viewer) {
-    voteForSequence(showSubdomain: $showSubdomain, name: $name, latitude: $latitude, longitude: $longitude, viewerId: $viewerId)
+  mutation VoteForSequence($showSubdomain: String!, $name: String!, $latitude: Float, $longitude: Float, $viewerId: String, $locationCode: Int) @api(name: viewer) {
+    voteForSequence(showSubdomain: $showSubdomain, name: $name, latitude: $latitude, longitude: $longitude, viewerId: $viewerId, locationCode: $locationCode)
   }
 `;

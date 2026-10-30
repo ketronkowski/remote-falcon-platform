@@ -19,7 +19,7 @@ import { trackPosthogEvent } from '../../../utils/analytics/posthog';
 
 import { addSequenceToQueueService, voteForSequenceService } from '../../../services/viewer/mutations.service';
 import { getViewerId } from '../../../utils/viewerId';
-import { LocationCheckMethod, ViewerControlMode } from '../../../utils/enum';
+import { usesCodeCheck, usesGeoCheck, ViewerControlMode } from '../../../utils/enum';
 import { ADD_SEQUENCE_TO_QUEUE, INSERT_VIEWER_PAGE_STATS, VOTE_FOR_SEQUENCE } from '../../../utils/graphql/viewer/mutations';
 import { GET_ACTIVE_VIEWER_PAGE, GET_SHOW_FOR_VIEWER, VOTES_REMAINING } from '../../../utils/graphql/viewer/queries';
 import { orderSequencesByCategory } from './helpers/categoryOrder';
@@ -48,6 +48,16 @@ const htmlToReactParser = new htmlToReact.Parser();
 const processNodeDefinitions = new htmlToReact.ProcessNodeDefinitions(React);
 
 const blockRedirectReferrers = ['https://player.pulsemesh.io/'];
+
+// The location code is checked by the viewer service, so send whatever the
+// viewer typed (or null when blank) on shows that use a code.
+const enteredCodeFor = (locationCheckMethod, enteredLocationCode) => {
+  if (!usesCodeCheck(locationCheckMethod)) {
+    return null;
+  }
+  const code = parseInt(enteredLocationCode, 10);
+  return Number.isFinite(code) ? code : null;
+};
 
 const ExternalViewerPage = () => {
   const viewerScriptsBasePath = '/viewer-scripts/';
@@ -335,24 +345,6 @@ const ExternalViewerPage = () => {
       } finally {
         requestInFlightRef.current = false;
       }
-      if (show?.preferences?.locationCheckMethod === LocationCheckMethod.CODE) {
-        if (parseInt(enteredLocationCode, 10) !== parseInt(show?.preferences?.locationCode, 10)) {
-          const invalidCodeResponse = {
-            error: {
-              graphQLErrors: [
-                {
-                  extensions: {
-                    message: 'INVALID_CODE'
-                  }
-                }
-              ]
-            }
-          };
-          showViewerMessage(invalidCodeResponse);
-          setEnteredLocationCode(null);
-          return;
-        }
-      }
       addSequenceToQueueService(
         addSequenceToQueueMutation,
         getSubdomain(),
@@ -364,6 +356,7 @@ const ExternalViewerPage = () => {
         // genuinely-out-of-range one. Sent on every attempt, not just failures,
         // because the server doesn't know it will reject until the rule runs.
         locationPermissionRef.current,
+        enteredCodeFor(show?.preferences?.locationCheckMethod, enteredLocationCode),
         (response) => {
           showViewerMessage(response);
         }
@@ -372,7 +365,6 @@ const ExternalViewerPage = () => {
     [
       show?.preferences?.enableGeolocation,
       show?.preferences?.locationCheckMethod,
-      show?.preferences?.locationCode,
       show?.preferences?.analyticsBetaOptIn,
       addSequenceToQueueMutation,
       setViewerLocation,
@@ -408,24 +400,6 @@ const ExternalViewerPage = () => {
       } finally {
         requestInFlightRef.current = false;
       }
-      if (show?.preferences?.locationCheckMethod === LocationCheckMethod.CODE) {
-        if (parseInt(enteredLocationCode, 10) !== parseInt(show?.preferences?.locationCode, 10)) {
-          const invalidCodeResponse = {
-            error: {
-              graphQLErrors: [
-                {
-                  extensions: {
-                    message: 'INVALID_CODE'
-                  }
-                }
-              ]
-            }
-          };
-          showViewerMessage(invalidCodeResponse);
-          setEnteredLocationCode(null);
-          return;
-        }
-      }
       voteForSequenceService(
         voteForSequenceMutation,
         getSubdomain(),
@@ -433,6 +407,7 @@ const ExternalViewerPage = () => {
         coords?.latitude ?? 0.0,
         coords?.longitude ?? 0.0,
         show?.preferences?.analyticsBetaOptIn ? getViewerId() : null,
+        enteredCodeFor(show?.preferences?.locationCheckMethod, enteredLocationCode),
         (response) => {
           showViewerMessage(response);
           if (response?.success) {
@@ -448,7 +423,6 @@ const ExternalViewerPage = () => {
     [
       show?.preferences?.enableGeolocation,
       show?.preferences?.locationCheckMethod,
-      show?.preferences?.locationCode,
       show?.preferences?.analyticsBetaOptIn,
       voteForSequenceMutation,
       setViewerLocation,
@@ -572,7 +546,7 @@ const ExternalViewerPage = () => {
     // PRD-019 — only GPS-gated shows can fail a location check, so only they get
     // a slot. Must happen before the parse below: the token has to be in the
     // string for the parser's instructions to find it.
-    if (show?.preferences?.locationCheckMethod === LocationCheckMethod.GEO) {
+    if (usesGeoCheck(show?.preferences?.locationCheckMethod)) {
       parsedViewerPage = injectRetryLocationToken(parsedViewerPage);
       parsedViewerPage = injectInlineRetryLocationToken(parsedViewerPage);
     }
@@ -867,7 +841,7 @@ const ExternalViewerPage = () => {
     // own whether to render anything for the current permission state; passing
     // it here does not mean it appears.
     const retryLocationElement =
-      show?.preferences?.locationCheckMethod === LocationCheckMethod.GEO ? (
+      usesGeoCheck(show?.preferences?.locationCheckMethod) ? (
         <LocationRecoveryControl permission={locationPermission} onRetry={retryViewerLocation} onPosition={acceptElementPosition} />
       ) : (
         <></>
@@ -876,7 +850,7 @@ const ExternalViewerPage = () => {
     // Secondary surface, inside the operator's invalidLocation message. Hidden
     // by that block's own display:none until a rejection shows it.
     const retryLocationInlineElement =
-      show?.preferences?.locationCheckMethod === LocationCheckMethod.GEO ? (
+      usesGeoCheck(show?.preferences?.locationCheckMethod) ? (
         <LocationRecoveryControl
           variant="inline"
           permission={locationPermission}
@@ -1024,7 +998,7 @@ const ExternalViewerPage = () => {
       // #162 — seed the votes-left count on load so the {VOTES_REMAINING}
       // slot is correct before the first vote.
       refreshVotesRemaining(showData?.preferences?.analyticsBetaOptIn);
-      if (showData?.preferences?.locationCheckMethod === LocationCheckMethod.GEO) {
+      if (usesGeoCheck(showData?.preferences?.locationCheckMethod)) {
         setViewerLocation();
       }
       trackPosthogEvent('viewer_page_view', { show_name: showData?.showName });

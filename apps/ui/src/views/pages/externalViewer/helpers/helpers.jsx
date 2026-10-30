@@ -1,7 +1,7 @@
 // eslint-disable-next-line import/prefer-default-export
 import React from 'react';
 
-import { LocationCheckMethod, ViewerControlMode } from '../../../../utils/enum';
+import { usesCodeCheck, usesGeoCheck, ViewerControlMode } from '../../../../utils/enum';
 
 /**
  * Artwork for one sequence, or `null` when the operator hasn't set an image.
@@ -313,13 +313,13 @@ export const processingInstructions = (
       jukeboxQueueNode(<>{jukeboxRequests}</>),
       votingDynamicContainerNode(<></>),
       votingPlaylistsDynamicContainerNode(<></>),
-      locationCheckMethod === LocationCheckMethod.CODE ? blankNode(null) : locationCodeDynamicContainerNode(<></>),
+      usesCodeCheck(locationCheckMethod) ? blankNode(null) : locationCodeDynamicContainerNode(<></>),
       retryLocationNode(<>{retryLocation}</>),
       retryLocationInlineNode(<>{retryLocationInline}</>),
-      // Inverse of the location-code container above: that one survives only on
-      // CODE shows, this one only on GEO shows. `blankNode` matches nothing, so
+      // Counterpart of the location-code container above: that one survives on
+      // CODE shows, this one on GEO shows, and GEO_OR_CODE shows keep both. `blankNode` matches nothing, so
       // it is how a branch says "leave this container alone".
-      locationCheckMethod === LocationCheckMethod.GEO ? blankNode(null) : locationPermissionDynamicContainerNode(<></>),
+      usesGeoCheck(locationCheckMethod) ? blankNode(null) : locationPermissionDynamicContainerNode(<></>),
       afterHoursNode(<></>),
       allNodes(processNodeDefinitions)
     ];
@@ -336,13 +336,13 @@ export const processingInstructions = (
       jukeboxQueueNode(<></>),
       jukeboxDynamicContainerNode(<></>),
       jukeboxPlaylistsDynamicContainerNode(<></>),
-      locationCheckMethod === LocationCheckMethod.CODE ? blankNode(null) : locationCodeDynamicContainerNode(<></>),
+      usesCodeCheck(locationCheckMethod) ? blankNode(null) : locationCodeDynamicContainerNode(<></>),
       retryLocationNode(<>{retryLocation}</>),
       retryLocationInlineNode(<>{retryLocationInline}</>),
-      // Inverse of the location-code container above: that one survives only on
-      // CODE shows, this one only on GEO shows. `blankNode` matches nothing, so
+      // Counterpart of the location-code container above: that one survives on
+      // CODE shows, this one on GEO shows, and GEO_OR_CODE shows keep both. `blankNode` matches nothing, so
       // it is how a branch says "leave this container alone".
-      locationCheckMethod === LocationCheckMethod.GEO ? blankNode(null) : locationPermissionDynamicContainerNode(<></>),
+      usesGeoCheck(locationCheckMethod) ? blankNode(null) : locationPermissionDynamicContainerNode(<></>),
       afterHoursNode(<></>),
       allNodes(processNodeDefinitions)
     ];

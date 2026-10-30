@@ -10,6 +10,7 @@ public enum StatusResponse {
   API_ACCESS_REQUESTED,
   QUEUE_FULL,
   INVALID_LOCATION,
+  INVALID_CODE,
   SEQUENCE_REQUESTED,
   // #73 — the named sequence is temporarily unavailable: on the hide-after-play
   // cooldown (visibilityCount > 0) or at its #163 nightly play cap. The viewer

@@ -213,6 +213,20 @@ const useChecks = () => {
           label: `Location check: Code (${prefs.locationCode})`
         });
       }
+    } else if (prefs.locationCheckMethod === LocationCheckMethod.GEO_OR_CODE) {
+      if (!prefs.allowedRadius || prefs.allowedRadius <= 0 || !prefs.locationCode || prefs.locationCode <= 0) {
+        out.push({
+          status: 'blocker',
+          label: 'Location check: GPS or code (radius or code not set)',
+          detail: 'Set both a check radius and a location code in Settings → Interaction Safeguards.',
+          action: safeguards
+        });
+      } else {
+        out.push({
+          status: 'ok',
+          label: `Location check: GPS (${prefs.allowedRadius} mile geofence radius) or code (${prefs.locationCode})`
+        });
+      }
     } else if (prefs.locationCheckMethod === LocationCheckMethod.NONE) {
       out.push({
         status: 'ok',
