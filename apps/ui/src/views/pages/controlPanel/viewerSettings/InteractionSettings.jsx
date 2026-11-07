@@ -17,13 +17,14 @@ import useAutoSave from '../../../../hooks/useAutoSave';
 import { savePreferencesService } from '../../../../services/controlPanel/mutations.service';
 import { useDispatch, useSelector } from '../../../../store';
 import { setShow } from '../../../../store/slices/show';
-import { LocationCheckMethod } from '../../../../utils/enum';
+import { LocationCheckMethod, usesCodeCheck, usesGeoCheck } from '../../../../utils/enum';
 import { UPDATE_PREFERENCES } from '../../../../utils/graphql/controlPanel/mutations';
 import { showAlert } from '../../globalPageHelpers';
 
 const locationCheckMethods = [
   { label: 'GPS Location', id: 'GEO' },
-  { label: 'Code', id: 'CODE' }
+  { label: 'Code', id: 'CODE' },
+  { label: 'GPS Location or Code', id: 'GEO_OR_CODE' }
 ];
 
 // Kept for backwards-compatible test coverage of the #66 chip-save
@@ -457,7 +458,7 @@ const InteractionSettings = () => {
                   </Grid>
                 </Grid>
               </CardActions>
-              {values.locationCheckMethod === LocationCheckMethod.GEO && (
+              {usesGeoCheck(values.locationCheckMethod) && (
                 <>
                   <Divider />
                   <CardActions>
@@ -607,7 +608,7 @@ const InteractionSettings = () => {
                   </CardActions>
                 </>
               )}
-              {values.locationCheckMethod === LocationCheckMethod.CODE && (
+              {usesCodeCheck(values.locationCheckMethod) && (
                 <>
                   <Divider />
                   <CardActions>

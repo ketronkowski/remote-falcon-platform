@@ -8,6 +8,7 @@ import org.eclipse.microprofile.graphql.Type;
 public enum LocationCheckMethod {
     GEO("GEO"),
     CODE("CODE"),
+    GEO_OR_CODE("GEO_OR_CODE"),
     NONE("NONE");
 
     @SuppressWarnings("unused")

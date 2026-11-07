@@ -98,7 +98,7 @@ class MongoFailFastIntegrationTest {
   @Test
   @DisplayName("REST: MongoTimeoutException maps to 503 with Retry-After: 15")
   void restTimeoutIs503() {
-    when(mutationService.addSequenceToQueue(anyString(), anyString(), any(), any(), any(), any()))
+    when(mutationService.addSequenceToQueue(anyString(), anyString(), any(), any(), any(), any(), any()))
         .thenThrow(new MongoTimeoutException("Timed out after 1000 ms while waiting for a connection"));
 
     given()
@@ -115,7 +115,7 @@ class MongoFailFastIntegrationTest {
   @Test
   @DisplayName("REST: MongoSocketReadTimeoutException maps to 503 with Retry-After: 15")
   void restReadTimeoutIs503() {
-    when(mutationService.voteForSequence(anyString(), anyString(), any(), any(), any()))
+    when(mutationService.voteForSequence(anyString(), anyString(), any(), any(), any(), any()))
         .thenThrow(new MongoSocketReadTimeoutException("read timed out", new ServerAddress(), null));
 
     given()

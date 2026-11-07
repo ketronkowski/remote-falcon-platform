@@ -106,6 +106,8 @@ public class ShowRepository implements PanacheMongoRepository<Show> {
                 "stats.votingWin",         // Voting win stats not needed
                 "stats.jukebox",           // Jukebox stats not needed
                 "showToken",               // Sensitive authentication token
+                "preferences.locationCode", // Checked server-side by GeofenceRule;
+                                           // sending it would let anyone read it
                 "email",                   // Sensitive PII
                 "password",                // Sensitive
                 "lastLoginIp",             // Sensitive field

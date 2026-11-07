@@ -89,23 +89,23 @@ class GraphQLControllerTest {
   @Test
   @DisplayName("addSequenceToQueue delegates to mutation service and returns result")
   void testAddSequenceToQueue() {
-    when(mutationService.addSequenceToQueue("sub", "Song", 1.23f, 4.56f, null, null)).thenReturn(true);
+    when(mutationService.addSequenceToQueue("sub", "Song", 1.23f, 4.56f, null, null, null)).thenReturn(true);
 
-    Boolean result = controller.addSequenceToQueue("sub", "Song", 1.23, 4.56, "", null);
+    Boolean result = controller.addSequenceToQueue("sub", "Song", 1.23, 4.56, "", null, null);
 
     assertTrue(result);
-    verify(mutationService).addSequenceToQueue("sub", "Song", 1.23f, 4.56f, null, null);
+    verify(mutationService).addSequenceToQueue("sub", "Song", 1.23f, 4.56f, null, null, null);
   }
 
   @Test
   @DisplayName("voteForSequence delegates to mutation service and returns result")
   void testVoteForSequence() {
-    when(mutationService.voteForSequence("sub", "Song", 1.23f, 4.56f, null)).thenReturn(true);
+    when(mutationService.voteForSequence("sub", "Song", 1.23f, 4.56f, null, null)).thenReturn(true);
 
-    Boolean result = controller.voteForSequence("sub", "Song", 1.23, 4.56, "");
+    Boolean result = controller.voteForSequence("sub", "Song", 1.23, 4.56, "", null);
 
     assertTrue(result);
-    verify(mutationService).voteForSequence("sub", "Song", 1.23f, 4.56f, null);
+    verify(mutationService).voteForSequence("sub", "Song", 1.23f, 4.56f, null, null);
   }
 
   @Test

@@ -340,6 +340,67 @@ class RulesTest {
     assertEquals(StatusResponse.INVALID_LOCATION.name(), d.reason());
   }
 
+  // --- GeofenceRule: CODE / GEO_OR_CODE -----------------------------------
+
+  private static EvaluationContext ctxCode(Show show, Float lat, Float lon, Integer code) {
+    return new EvaluationContext(show, "1.2.3.4", null, lat, lon, code, null);
+  }
+
+  private static Preference codePrefs(LocationCheckMethod method) {
+    Preference p = geoPrefs();
+    p.setLocationCheckMethod(method);
+    p.setLocationCode(4321);
+    return p;
+  }
+
+  @Test
+  void code_allowsMatchingCode() {
+    assertFalse(new GeofenceRule().evaluate(ctxCode(showWith(codePrefs(LocationCheckMethod.CODE)), null, null, 4321)).denied());
+  }
+
+  @Test
+  void code_deniesWrongOrMissingCode() {
+    Show show = showWith(codePrefs(LocationCheckMethod.CODE));
+    Decision wrong = new GeofenceRule().evaluate(ctxCode(show, null, null, 1111));
+    assertTrue(wrong.denied());
+    assertEquals(StatusResponse.INVALID_CODE.name(), wrong.reason());
+    assertTrue(new GeofenceRule().evaluate(ctxCode(show, 40.7128f, -74.0060f, null)).denied());
+  }
+
+  @Test
+  void code_deniesWhenShowHasNoCodeSet() {
+    Preference p = codePrefs(LocationCheckMethod.CODE);
+    p.setLocationCode(0);
+    assertTrue(new GeofenceRule().evaluate(ctxCode(showWith(p), null, null, 0)).denied());
+  }
+
+  @Test
+  void geoOrCode_allowsRightCodeFromFarAway() {
+    Show show = showWith(codePrefs(LocationCheckMethod.GEO_OR_CODE));
+    assertFalse(new GeofenceRule().evaluate(ctxCode(show, 51.5074f, -0.1278f, 4321)).denied());
+    assertFalse(new GeofenceRule().evaluate(ctxCode(show, null, null, 4321)).denied());
+  }
+
+  @Test
+  void geoOrCode_allowsNearbyViewerWithoutCode() {
+    Show show = showWith(codePrefs(LocationCheckMethod.GEO_OR_CODE));
+    assertFalse(new GeofenceRule().evaluate(ctxCode(show, 40.7128f, -74.0060f, null)).denied());
+  }
+
+  @Test
+  void geoOrCode_deniesFarViewerWithoutCode() {
+    Decision d = new GeofenceRule().evaluate(ctxCode(showWith(codePrefs(LocationCheckMethod.GEO_OR_CODE)), 51.5074f, -0.1278f, null));
+    assertTrue(d.denied());
+    assertEquals(StatusResponse.INVALID_LOCATION.name(), d.reason());
+  }
+
+  @Test
+  void geoOrCode_deniesWrongCodeEvenWhenNearby() {
+    Decision d = new GeofenceRule().evaluate(ctxCode(showWith(codePrefs(LocationCheckMethod.GEO_OR_CODE)), 40.7128f, -74.0060f, 1111));
+    assertTrue(d.denied());
+    assertEquals(StatusResponse.INVALID_CODE.name(), d.reason());
+  }
+
   private static Preference geoPrefs() {
     Preference p = new Preference();
     p.setLocationCheckMethod(LocationCheckMethod.GEO);

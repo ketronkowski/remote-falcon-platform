@@ -18,4 +18,6 @@ public class RequestVoteRequest {
   // bundles call without it; that's fine, the backend stores null and
   // falls back to IP-based identity.
   private String viewerId;
+  // Code the viewer entered, for shows using CODE or GEO_OR_CODE location checks.
+  private Integer locationCode;
 }

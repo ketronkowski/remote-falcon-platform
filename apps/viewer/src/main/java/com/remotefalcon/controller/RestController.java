@@ -32,7 +32,8 @@ public class RestController {
           // rejection here can't be split into permission-vs-out-of-range and
           // stays in the plain INVALID_LOCATION bucket. Additive field on
           // RequestVoteRequest if a REST client ever needs the split.
-          null);
+          null,
+          request.getLocationCode());
       return RequestVoteResponse.builder().build();
     } catch (CustomGraphQLExceptionResolver e) {
       Object messageObj = e.getExtensions().get("message");
@@ -53,7 +54,8 @@ public class RestController {
           request.getSequence(),
           request.getViewerLatitude(),
           request.getViewerLongitude(),
-          request.getViewerId());
+          request.getViewerId(),
+          request.getLocationCode());
       return RequestVoteResponse.builder().build();
     } catch (CustomGraphQLExceptionResolver e) {
       Object messageObj = e.getExtensions().get("message");

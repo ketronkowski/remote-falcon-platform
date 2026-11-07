@@ -12,8 +12,14 @@ export const ViewerControlMode = {
 export const LocationCheckMethod = {
   GEO: 'GEO',
   CODE: 'CODE',
+  GEO_OR_CODE: 'GEO_OR_CODE',
   NONE: 'NONE'
 };
+
+// GEO_OR_CODE accepts either check: nearby viewers by GPS, remote viewers
+// (e.g. watching a live stream) by entering the location code.
+export const usesGeoCheck = (method) => method === LocationCheckMethod.GEO || method === LocationCheckMethod.GEO_OR_CODE;
+export const usesCodeCheck = (method) => method === LocationCheckMethod.CODE || method === LocationCheckMethod.GEO_OR_CODE;
 
 export const StatusResponse = {
   SHOW_EXISTS: 'SHOW_EXISTS',

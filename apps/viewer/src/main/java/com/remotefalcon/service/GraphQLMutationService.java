@@ -163,6 +163,11 @@ public class GraphQLMutationService {
 
   public Boolean addSequenceToQueue(String showSubdomain, String name, Float latitude, Float longitude, String viewerId,
       String locationPermission) {
+    return addSequenceToQueue(showSubdomain, name, latitude, longitude, viewerId, locationPermission, null);
+  }
+
+  public Boolean addSequenceToQueue(String showSubdomain, String name, Float latitude, Float longitude, String viewerId,
+      String locationPermission, Integer locationCode) {
     // Use optimized query that excludes large stats but keeps fields needed for validation
     Optional<Show> show = this.showRepository.findByShowSubdomainForMutations(showSubdomain);
     if (show.isPresent()) {
@@ -173,7 +178,7 @@ public class GraphQLMutationService {
         throw new CustomGraphQLExceptionResolver(StatusResponse.UNEXPECTED_ERROR.name());
       }
       Decision decision = RuleChain.firstDenial(REQUEST_RULES,
-          new EvaluationContext(existingShow, clientIp, viewerId, latitude, longitude, null));
+          new EvaluationContext(existingShow, clientIp, viewerId, latitude, longitude, locationCode, null));
       if (decision.denied()) {
         // PRD-019 — the LOGGED reason may be more specific than the THROWN one.
         // The thrown reason is a client contract (the viewer page switches its
@@ -361,6 +366,11 @@ public class GraphQLMutationService {
   }
 
   public Boolean voteForSequence(String showSubdomain, String name, Float latitude, Float longitude, String viewerId) {
+    return voteForSequence(showSubdomain, name, latitude, longitude, viewerId, null);
+  }
+
+  public Boolean voteForSequence(String showSubdomain, String name, Float latitude, Float longitude, String viewerId,
+      Integer locationCode) {
     // Use optimized query that excludes large stats
     Optional<Show> show = this.showRepository.findByShowSubdomainForMutations(showSubdomain);
     if (show.isPresent()) {
@@ -382,7 +392,7 @@ public class GraphQLMutationService {
         votesInWindow = this.voteEventRepository.countVotesSince(existingShow.id, viewerId, clientIp, votingWindowStart);
       }
       Decision decision = RuleChain.firstDenial(VOTE_RULES,
-          new EvaluationContext(existingShow, clientIp, viewerId, latitude, longitude, votesInWindow));
+          new EvaluationContext(existingShow, clientIp, viewerId, latitude, longitude, locationCode, votesInWindow));
       if (decision.denied()) {
         throw new CustomGraphQLExceptionResolver(decision.reason());
       }

@@ -3,16 +3,24 @@ package com.remotefalcon.rules;
 import com.remotefalcon.library.enums.LocationCheckMethod;
 import com.remotefalcon.library.enums.StatusResponse;
 import com.remotefalcon.library.models.GpsLocation;
+import com.remotefalcon.library.models.Preference;
 import com.remotefalcon.util.LocationUtil;
 import org.jboss.logging.Logger;
 
 import java.util.List;
 
 /**
- * When the show uses GPS gating ({@code locationCheckMethod == GEO}), denies a
- * viewer outside the allowed radius (or with missing coordinates). Skips when
- * GPS gating is off. A viewer is allowed if within {@code allowedRadius} of the
- * primary location OR any of {@code additionalGpsLocations} (#16).
+ * Enforces the show's "check viewer present" setting ({@code locationCheckMethod}):
+ * <ul>
+ *   <li>GEO: denies a viewer outside the allowed radius (or with missing
+ *   coordinates). A viewer is allowed if within {@code allowedRadius} of the
+ *   primary location OR any of {@code additionalGpsLocations} (#16).</li>
+ *   <li>CODE: denies a viewer who did not enter the show's {@code locationCode}.</li>
+ *   <li>GEO_OR_CODE: allows a viewer who entered the right code from anywhere
+ *   (e.g. watching a live stream), otherwise falls back to the GEO check.</li>
+ * </ul>
+ * Skips when the check is off. The code is compared here rather than in the
+ * browser, and the viewer getShow projection leaves it out.
  */
 public final class GeofenceRule implements Rule {
   private static final Logger LOG = Logger.getLogger(GeofenceRule.class);
@@ -20,9 +28,27 @@ public final class GeofenceRule implements Rule {
   @Override
   public Decision evaluate(EvaluationContext ctx) {
     var preferences = ctx.show().getPreferences();
-    if (preferences.getLocationCheckMethod() != LocationCheckMethod.GEO) {
+    LocationCheckMethod method = preferences.getLocationCheckMethod();
+    if (method == LocationCheckMethod.CODE) {
+      return codeMatches(preferences, ctx.locationCode())
+          ? Decision.allow()
+          : Decision.deny(StatusResponse.INVALID_CODE.name());
+    }
+    if (method == LocationCheckMethod.GEO_OR_CODE) {
+      if (ctx.locationCode() != null) {
+        return codeMatches(preferences, ctx.locationCode())
+            ? Decision.allow()
+            : Decision.deny(StatusResponse.INVALID_CODE.name());
+      }
+      return evaluateGeo(ctx, preferences);
+    }
+    if (method != LocationCheckMethod.GEO) {
       return Decision.skip();
     }
+    return evaluateGeo(ctx, preferences);
+  }
+
+  private static Decision evaluateGeo(EvaluationContext ctx, Preference preferences) {
     if (ctx.latitude() == null || ctx.longitude() == null) {
       return Decision.deny(StatusResponse.INVALID_LOCATION.name());
     }
@@ -43,6 +69,12 @@ public final class GeofenceRule implements Rule {
       }
     }
     return Decision.deny(StatusResponse.INVALID_LOCATION.name());
+  }
+
+  /** A show with no code set (null or 0) never matches, so CODE mode fails closed. */
+  private static boolean codeMatches(Preference preferences, Integer entered) {
+    Integer code = preferences.getLocationCode();
+    return code != null && code > 0 && code.equals(entered);
   }
 
   /** True when the viewer point is within {@code radius} miles of the center. Null-center safe. */

@@ -59,22 +59,25 @@ public class GraphQLController {
   @Name("addSequenceToQueue")
   @Description("Add Sequence To Queue")
   public Boolean addSequenceToQueue(String showSubdomain, String name, Double latitude, Double longitude, @DefaultValue("") String viewerId,
-      @DefaultValue("") String locationPermission) {
+      @DefaultValue("") String locationPermission, Integer locationCode) {
     return graphQLMutationService.addSequenceToQueue(showSubdomain, name,
         latitude != null ? latitude.floatValue() : null,
         longitude != null ? longitude.floatValue() : null,
         emptyToNull(viewerId),
-        emptyToNull(locationPermission));
+        emptyToNull(locationPermission),
+        locationCode);
   }
 
   @Mutation
   @Name("voteForSequence")
   @Description("Vote For Sequence")
-  public Boolean voteForSequence(String showSubdomain, String name, Double latitude, Double longitude, @DefaultValue("") String viewerId) {
+  public Boolean voteForSequence(String showSubdomain, String name, Double latitude, Double longitude, @DefaultValue("") String viewerId,
+      Integer locationCode) {
     return graphQLMutationService.voteForSequence(showSubdomain, name,
         latitude != null ? latitude.floatValue() : null,
         longitude != null ? longitude.floatValue() : null,
-        emptyToNull(viewerId));
+        emptyToNull(viewerId),
+        locationCode);
   }
 
   /*******
