@@ -27,6 +27,7 @@ import { jukeboxQueueElements, playingSequenceElement } from './helpers/nowPlayi
 import { isSequenceUnavailable as checkSequenceUnavailable } from './helpers/sequenceAvailability';
 import { UNAVAILABLE_HINT_DEFAULT_CSS, sequenceRowContent, unavailableRowProps } from './helpers/unavailableRow';
 import { readUtmParams, stripUtmFromAddressBar } from './helpers/utmParams';
+import { applyEmbedClass, readEmbedParams } from './helpers/embedMode';
 import LocationRecoveryControl from './LocationRecoveryControl';
 import ReconnectingNotice from './ReconnectingNotice';
 import { markViewerPageStatsRecorded, viewerPageStatsAlreadyRecorded } from './helpers/viewerPageStatsOnce';
@@ -61,6 +62,9 @@ const enteredCodeFor = (locationCheckMethod, enteredLocationCode) => {
 
 const ExternalViewerPage = () => {
   const viewerScriptsBasePath = '/viewer-scripts/';
+  // Embed mode (?embed=1&code=...): framed by the live-stream page. Read once;
+  // the query string doesn't change while the page is open.
+  const [embedParams] = useState(() => readEmbedParams(typeof window !== 'undefined' ? window.location.search : ''));
 
   const [loading, setLoading] = useState(true);
   // Set when getShow says to send the viewer to a self-hosted page. Stops the
@@ -99,7 +103,11 @@ const ExternalViewerPage = () => {
   // control appears, dialog appears, viewer allows, control vanishes. Waiting
   // confines it to viewers who genuinely cannot request.
   const [locationPermission, setLocationPermission] = useState(LocationPermission.UNKNOWN);
-  const [enteredLocationCode, setEnteredLocationCode] = useState(null);
+  const [enteredLocationCode, setEnteredLocationCode] = useState(embedParams.code);
+  useEffect(() => {
+    applyEmbedClass(embedParams.embed);
+    return () => applyEmbedClass(false);
+  }, [embedParams.embed]);
   const [messageDisplayTime] = useState(6000);
   const [nowPlaying, setNowPlaying] = useState(null);
   const [nowPlayingTimer, setNowPlayingTimer] = useState(0);
@@ -339,7 +347,7 @@ const ExternalViewerPage = () => {
       // a transient POSITION_UNAVAILABLE at tap time isn't rejected outright.
       let coords = viewerCoordsRef.current;
       try {
-        if (show?.preferences?.enableGeolocation) {
+        if (show?.preferences?.enableGeolocation && !embedParams.embed) {
           coords = (await setViewerLocation('request')) ?? viewerCoordsRef.current;
         }
       } finally {
@@ -364,6 +372,7 @@ const ExternalViewerPage = () => {
     },
     [
       show?.preferences?.enableGeolocation,
+      embedParams.embed,
       show?.preferences?.locationCheckMethod,
       show?.preferences?.analyticsBetaOptIn,
       addSequenceToQueueMutation,
@@ -394,7 +403,7 @@ const ExternalViewerPage = () => {
       // a transient POSITION_UNAVAILABLE at tap time isn't rejected outright.
       let coords = viewerCoordsRef.current;
       try {
-        if (show?.preferences?.enableGeolocation) {
+        if (show?.preferences?.enableGeolocation && !embedParams.embed) {
           coords = (await setViewerLocation('request')) ?? viewerCoordsRef.current;
         }
       } finally {
@@ -422,6 +431,7 @@ const ExternalViewerPage = () => {
     },
     [
       show?.preferences?.enableGeolocation,
+      embedParams.embed,
       show?.preferences?.locationCheckMethod,
       show?.preferences?.analyticsBetaOptIn,
       voteForSequenceMutation,
@@ -546,7 +556,7 @@ const ExternalViewerPage = () => {
     // PRD-019 — only GPS-gated shows can fail a location check, so only they get
     // a slot. Must happen before the parse below: the token has to be in the
     // string for the parser's instructions to find it.
-    if (usesGeoCheck(show?.preferences?.locationCheckMethod)) {
+    if (usesGeoCheck(show?.preferences?.locationCheckMethod) && !embedParams.embed) {
       parsedViewerPage = injectRetryLocationToken(parsedViewerPage);
       parsedViewerPage = injectInlineRetryLocationToken(parsedViewerPage);
     }
@@ -820,7 +830,12 @@ const ExternalViewerPage = () => {
 
     const locationCodeElement = (
       <>
-        <TextField type="number" name="locationCode" onChange={(e) => setEnteredLocationCode(e?.target?.value)} />
+        <TextField
+          type="number"
+          name="locationCode"
+          defaultValue={embedParams.code ?? undefined}
+          onChange={(e) => setEnteredLocationCode(e?.target?.value)}
+        />
       </>
     );
 
@@ -841,7 +856,7 @@ const ExternalViewerPage = () => {
     // own whether to render anything for the current permission state; passing
     // it here does not mean it appears.
     const retryLocationElement =
-      usesGeoCheck(show?.preferences?.locationCheckMethod) ? (
+      usesGeoCheck(show?.preferences?.locationCheckMethod) && !embedParams.embed ? (
         <LocationRecoveryControl permission={locationPermission} onRetry={retryViewerLocation} onPosition={acceptElementPosition} />
       ) : (
         <></>
@@ -850,7 +865,7 @@ const ExternalViewerPage = () => {
     // Secondary surface, inside the operator's invalidLocation message. Hidden
     // by that block's own display:none until a rejection shows it.
     const retryLocationInlineElement =
-      usesGeoCheck(show?.preferences?.locationCheckMethod) ? (
+      usesGeoCheck(show?.preferences?.locationCheckMethod) && !embedParams.embed ? (
         <LocationRecoveryControl
           variant="inline"
           permission={locationPermission}
@@ -883,6 +898,8 @@ const ExternalViewerPage = () => {
     setRemoteViewerReactPage(reactHtml);
   }, [
     activeViewerPage,
+    embedParams.code,
+    embedParams.embed,
     addSequenceToQueue,
     show?.requests,
     show?.playingNext,
@@ -998,7 +1015,7 @@ const ExternalViewerPage = () => {
       // #162 — seed the votes-left count on load so the {VOTES_REMAINING}
       // slot is correct before the first vote.
       refreshVotesRemaining(showData?.preferences?.analyticsBetaOptIn);
-      if (usesGeoCheck(showData?.preferences?.locationCheckMethod)) {
+      if (usesGeoCheck(showData?.preferences?.locationCheckMethod) && !embedParams.embed) {
         setViewerLocation();
       }
       trackPosthogEvent('viewer_page_view', { show_name: showData?.showName });
@@ -1047,7 +1064,14 @@ const ExternalViewerPage = () => {
 
       return 'ok';
     },
-    [orderSequencesForVoting, setViewerLocation, insertViewerPageStatsMutation, refreshVotesRemaining, loadViewerEnhancements]
+    [
+      orderSequencesForVoting,
+      setViewerLocation,
+      insertViewerPageStatsMutation,
+      refreshVotesRemaining,
+      loadViewerEnhancements,
+      embedParams.embed
+    ]
   );
 
   // Steady-state poll update. The operator's page HTML is not refetched: it's

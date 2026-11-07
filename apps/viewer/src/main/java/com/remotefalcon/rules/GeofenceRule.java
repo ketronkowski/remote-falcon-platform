@@ -20,23 +20,34 @@ import java.util.List;
  *   (e.g. watching a live stream), otherwise falls back to the GEO check.</li>
  * </ul>
  * Skips when the check is off. The code is compared here rather than in the
- * browser, and the viewer getShow projection leaves it out.
+ * browser, and the viewer getShow projection leaves it out. When the daily code
+ * is configured ({@link DailyCode}), today's code replaces the fixed one.
  */
 public final class GeofenceRule implements Rule {
   private static final Logger LOG = Logger.getLogger(GeofenceRule.class);
+
+  private final DailyCode dailyCode;
+
+  public GeofenceRule() {
+    this(DailyCode.fromConfig());
+  }
+
+  GeofenceRule(DailyCode dailyCode) {
+    this.dailyCode = dailyCode;
+  }
 
   @Override
   public Decision evaluate(EvaluationContext ctx) {
     var preferences = ctx.show().getPreferences();
     LocationCheckMethod method = preferences.getLocationCheckMethod();
     if (method == LocationCheckMethod.CODE) {
-      return codeMatches(preferences, ctx.locationCode())
+      return codeMatches(ctx, preferences)
           ? Decision.allow()
           : Decision.deny(StatusResponse.INVALID_CODE.name());
     }
     if (method == LocationCheckMethod.GEO_OR_CODE) {
       if (ctx.locationCode() != null) {
-        return codeMatches(preferences, ctx.locationCode())
+        return codeMatches(ctx, preferences)
             ? Decision.allow()
             : Decision.deny(StatusResponse.INVALID_CODE.name());
       }
@@ -71,8 +82,15 @@ public final class GeofenceRule implements Rule {
     return Decision.deny(StatusResponse.INVALID_LOCATION.name());
   }
 
-  /** A show with no code set (null or 0) never matches, so CODE mode fails closed. */
-  private static boolean codeMatches(Preference preferences, Integer entered) {
+  /**
+   * With the daily code on, only today's code matches. Otherwise a show with no
+   * code set (null or 0) never matches, so CODE mode fails closed.
+   */
+  private boolean codeMatches(EvaluationContext ctx, Preference preferences) {
+    Integer entered = ctx.locationCode();
+    if (dailyCode.enabled()) {
+      return dailyCode.matches(ctx.show().getShowSubdomain(), entered);
+    }
     Integer code = preferences.getLocationCode();
     return code != null && code > 0 && code.equals(entered);
   }
