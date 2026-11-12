@@ -33,6 +33,10 @@ public class DashboardStatsResponse {
     private Integer total;
     private Integer unique;
     private List<SequenceStat> sequences;
+    // Jukebox only: requests made with the show code (Stat.Jukebox.via ==
+    // CODE). With a daily code that only the live-stream page hands out,
+    // this is "requests from the live stream". Null for voting stats.
+    private Integer liveStream;
   }
 
   @Data
@@ -40,6 +44,8 @@ public class DashboardStatsResponse {
   public static class SequenceStat {
     private String name;
     private Integer total;
+    // Jukebox only: how many of this sequence's requests came with the code.
+    private Integer liveStream;
   }
 
   @Data

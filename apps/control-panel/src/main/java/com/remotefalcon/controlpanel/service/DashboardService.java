@@ -862,6 +862,7 @@ public class DashboardService {
               .collect(Collectors.groupingBy(Stat.Jukebox::getName));
       requests.forEach((sequence, request) -> sequences.add(DashboardStatsResponse.SequenceStat.builder()
               .total(request.size())
+              .liveStream(countLiveStream(request))
               .name(sequence)
               .build()));
       jukeboxStats.add(DashboardStatsResponse.Stat.builder()
@@ -870,6 +871,7 @@ public class DashboardService {
                       .toList())
               .date(ZonedDateTime.of(date, date.atStartOfDay().toLocalTime(), userZone).toInstant().toEpochMilli())
               .total(stat.size())
+              .liveStream(countLiveStream(stat))
               .build());
     });
 
@@ -896,6 +898,7 @@ public class DashboardService {
 
     jukeboxStatsGroupedBySequence.forEach((sequence, stat) -> sequences.add(DashboardStatsResponse.SequenceStat.builder()
             .total(stat.size())
+            .liveStream(countLiveStream(stat))
             .name(sequence)
             .build()));
 
@@ -903,7 +906,17 @@ public class DashboardService {
 
     return DashboardStatsResponse.Stat.builder()
             .sequences(sequences)
+            .liveStream(sequences.stream().mapToInt(seq -> seq.getLiveStream() == null ? 0 : seq.getLiveStream()).sum())
             .build();
+  }
+
+  /**
+   * Requests that passed the location check with the show code rather than
+   * GPS (Stat.Jukebox.via == CODE). On a show whose daily code is only handed
+   * out by the live-stream page, these are the live-stream requests.
+   */
+  static int countLiveStream(List<Stat.Jukebox> requests) {
+    return (int) requests.stream().filter(request -> "CODE".equals(request.getVia())).count();
   }
 
   private List<DashboardStatsResponse.Stat> buildVoteStatsByDate(ZonedDateTime startDateAtZone, ZonedDateTime endDateAtZone, String timezone, List<Stat.Voting> inRange, boolean statsPresent) {

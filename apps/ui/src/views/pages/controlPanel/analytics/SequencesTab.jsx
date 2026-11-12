@@ -112,6 +112,16 @@ const TopSequencesBar = ({ items, maxValue, prevRankByName, compareToPrior, onRo
                 {item.name}
               </Typography>
               {compareToPrior && <RankDelta delta={rankDelta} />}
+              {item.liveStream > 0 && (
+                <Typography
+                  variant="caption"
+                  data-testid="live-stream-count"
+                  sx={{ color: 'secondary.main', fontWeight: 600, whiteSpace: 'nowrap' }}
+                  title="Requested with the show code, which only the live-stream page sends"
+                >
+                  {item.liveStream} from live stream
+                </Typography>
+              )}
             </Stack>
             <Box
               sx={{
@@ -192,11 +202,19 @@ const TopRequested = () => {
 
   const maxValue = items.length ? items[0].total || 0 : 0;
 
+  // Requests made with the show code: with a daily code that only the
+  // live-stream page sends, these came from the live stream.
+  const liveStreamTotal = isJukebox ? current.data?.jukeboxBySequence?.liveStream || 0 : 0;
+  const requestTotal = isJukebox
+    ? (current.data?.jukeboxBySequence?.sequences || []).reduce((sum, item) => sum + (item.total || 0), 0)
+    : 0;
+
   return (
     <MainCard
       title={`Top ${titleNoun} sequences`}
       secondary={
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+          {liveStreamTotal > 0 && `${liveStreamTotal} of ${requestTotal} requests from the live stream · `}
           {compareToPrior ? 'with rank delta vs prior period' : 'in current range'}
         </Typography>
       }

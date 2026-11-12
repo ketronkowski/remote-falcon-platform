@@ -344,11 +344,15 @@ type Stat {
     total: Int
     unique: Int
     sequences: [SequenceStat]
+    "Jukebox only: requests made with the show code (from the live stream)"
+    liveStream: Int
 }
 
 type SequenceStat {
     name: String
     total: Int
+    "Jukebox only: requests made with the show code (from the live stream)"
+    liveStream: Int
 }
 
 type ShowsOnAMap {
