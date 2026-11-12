@@ -36,13 +36,14 @@ type Jukebox {
   "ISO-8601"
   dateTime: DateTime
   name: String
+  via: String
   viewerId: String
 }
 
 "Mutation root"
 type Mutation {
   "Add Sequence To Queue"
-  addSequenceToQueue(latitude: Float, locationPermission: String = "", longitude: Float, name: String, showSubdomain: String, viewerId: String = ""): Boolean
+  addSequenceToQueue(latitude: Float, locationCode: Int, locationPermission: String = "", longitude: Float, name: String, showSubdomain: String, viewerId: String = ""): Boolean
   "Insert Viewer Page Stats"
   insertViewerPageStats(
     "ISO-8601"
@@ -59,7 +60,7 @@ type Mutation {
   "Update Playing Now"
   updatePlayingNow(playingNow: String, showSubdomain: String): Boolean
   "Vote For Sequence"
-  voteForSequence(latitude: Float, longitude: Float, name: String, showSubdomain: String, viewerId: String = ""): Boolean
+  voteForSequence(latitude: Float, locationCode: Int, longitude: Float, name: String, showSubdomain: String, viewerId: String = ""): Boolean
 }
 
 type NotificationModel {

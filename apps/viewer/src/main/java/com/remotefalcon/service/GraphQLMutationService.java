@@ -1,6 +1,7 @@
 package com.remotefalcon.service;
 
 import com.remotefalcon.exception.CustomGraphQLExceptionResolver;
+import com.remotefalcon.library.enums.LocationCheckMethod;
 import com.remotefalcon.library.enums.StatusResponse;
 import com.remotefalcon.library.models.*;
 import com.remotefalcon.library.quarkus.entity.Show;
@@ -225,6 +226,7 @@ public class GraphQLMutationService {
             .dateTime(LocalDateTime.now())
             .name(requestedSequence.get().getName())
             .viewerId(viewerId)
+            .via(requestVia(existingShow, locationCode))
             .build();
 
         if (leaderSequence.isPresent()) {
@@ -323,6 +325,7 @@ public class GraphQLMutationService {
               .dateTime(LocalDateTime.now())
               .name(requestedSequenceGroup.get().getName())
               .viewerId(viewerId)
+              .via(requestVia(existingShow, locationCode))
               .build();
 
           // Batched write: single DB call for all requests and stat
@@ -782,6 +785,25 @@ public class GraphQLMutationService {
 
   // #168 — operator-managed list of IPs (their own test/record devices) whose
   // interactions are kept out of statistics. Null/empty list = nobody excluded.
+  /**
+   * How an accepted request passed the location check, for the jukebox stat:
+   * GPS or CODE, or null when the check is off. Mirrors GeofenceRule: on a
+   * GEO_OR_CODE show an entered code is what was checked.
+   */
+  static String requestVia(Show show, Integer locationCode) {
+    LocationCheckMethod method = show.getPreferences() == null ? null : show.getPreferences().getLocationCheckMethod();
+    if (method == LocationCheckMethod.GEO) {
+      return "GPS";
+    }
+    if (method == LocationCheckMethod.CODE) {
+      return "CODE";
+    }
+    if (method == LocationCheckMethod.GEO_OR_CODE) {
+      return locationCode != null ? "CODE" : "GPS";
+    }
+    return null;
+  }
+
   private static boolean isStatsExcluded(Show show, String ip) {
     // Entries may be single addresses, CIDR blocks or ranges (#175).
     return IpMatcher.matchesAny(show.getPreferences().getStatsExcludedIps(), ip);

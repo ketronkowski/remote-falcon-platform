@@ -610,15 +610,19 @@ export const DASHBOARD_STATS = gql`
       jukeboxByDate {
         date
         total
+        liveStream
         sequences {
           name
           total
+          liveStream
         }
       }
       jukeboxBySequence {
+        liveStream
         sequences {
           name
           total
+          liveStream
         }
       }
       votingByDate {
