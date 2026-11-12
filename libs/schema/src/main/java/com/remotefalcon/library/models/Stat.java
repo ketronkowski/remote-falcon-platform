@@ -38,6 +38,11 @@ public class Stat {
         private String name;
         private String viewerId;
         private LocalDateTime dateTime;
+        // How the request passed the "check viewer present" setting: GPS or
+        // CODE (the live-stream page sends the daily code). Null when the check
+        // is off and on every stat written before this field existed. Lets the
+        // viewer-stats dashboard tell driveway requests from stream ones.
+        private String via;
     }
 
     @Type

@@ -36,6 +36,7 @@ type Jukebox {
   "ISO-8601"
   dateTime: DateTime
   name: String
+  via: String
   viewerId: String
 }
 
