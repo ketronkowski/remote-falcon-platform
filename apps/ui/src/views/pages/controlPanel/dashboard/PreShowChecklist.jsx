@@ -174,9 +174,6 @@ const useChecks = () => {
     // Location check rows always lead with "Location check:" followed by
     // the chosen method's specifics, so all three modes (GPS / Code / off)
     // render in a consistent shape regardless of state.
-    // Location check rows always lead with "Location check:" followed by
-    // the chosen method's specifics, so all three modes (GPS / Code / off)
-    // render in a consistent shape regardless of state.
     const safeguards = { label: 'Open safeguards', onClick: goTo('/control-panel/remote-falcon-settings/safeguards') };
     if (prefs.locationCheckMethod === LocationCheckMethod.GEO) {
       if (!prefs.allowedRadius || prefs.allowedRadius <= 0) {
@@ -214,17 +211,21 @@ const useChecks = () => {
         });
       }
     } else if (prefs.locationCheckMethod === LocationCheckMethod.GEO_OR_CODE) {
-      if (!prefs.allowedRadius || prefs.allowedRadius <= 0 || !prefs.locationCode || prefs.locationCode <= 0) {
+      // Only the radius is required here. The code is optional: with the
+      // daily code on, the viewer replaces the fixed code with the day's code
+      // (handed out on the live stream), so an unset fixed code is expected.
+      if (!prefs.allowedRadius || prefs.allowedRadius <= 0) {
         out.push({
           status: 'blocker',
-          label: 'Location check: GPS or code (radius or code not set)',
-          detail: 'Set both a check radius and a location code in Settings → Interaction Safeguards.',
+          label: 'Location check: GPS or code (no radius set)',
+          detail: 'Set a check radius in Settings → Interaction Safeguards.',
           action: safeguards
         });
       } else {
+        const code = prefs.locationCode > 0 ? ` (${prefs.locationCode})` : '';
         out.push({
           status: 'ok',
-          label: `Location check: GPS (${prefs.allowedRadius} mile geofence radius) or code (${prefs.locationCode})`
+          label: `Location check: GPS (${prefs.allowedRadius} mile geofence radius) or code${code}`
         });
       }
     } else if (prefs.locationCheckMethod === LocationCheckMethod.NONE) {
