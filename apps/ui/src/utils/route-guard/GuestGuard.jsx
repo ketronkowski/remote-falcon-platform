@@ -6,7 +6,7 @@ import {useNavigate, useLocation} from 'react-router-dom';
 import { CONTROL_PANEL_PATH } from '../../config';
 import useAuth from '../../hooks/useAuth';
 
-import {isExternalViewer, isSubdomainCP} from './helpers/helpers';
+import {isExternalViewer, isSubdomainCP, viewerRedirectTarget} from './helpers/helpers';
 
 /**
  * Guest guard for routes having no auth required
@@ -20,7 +20,8 @@ const GuestGuard = ({ children }) => {
 
   useEffect(() => {
     if (isExternalViewer()) {
-      navigate('/remote-falcon', { replace: true });
+      const target = viewerRedirectTarget(window.location);
+      if (target) navigate(target, { replace: true });
       return;
     }
     const swapCP = import.meta.env.VITE_SWAP_CP === 'true';

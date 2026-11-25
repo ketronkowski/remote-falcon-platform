@@ -74,3 +74,17 @@ export const getRouterBasename = () => {
   }
   return '';
 };
+
+/**
+ * Where to send an external viewer: /remote-falcon, keeping the query string
+ * and hash. The viewer page reads ?embed=1&code=... (the live-stream page
+ * frames it that way) and ?utm_source=... after this redirect, so dropping
+ * them turned embed mode off and showed stream viewers the GPS prompt.
+ * Returns null when the viewer is already there, so no navigation is needed.
+ */
+export const viewerRedirectTarget = (location) => {
+  const search = location?.search || '';
+  const hash = location?.hash || '';
+  if (location?.pathname === '/remote-falcon') return null;
+  return { pathname: '/remote-falcon', search, hash };
+};
