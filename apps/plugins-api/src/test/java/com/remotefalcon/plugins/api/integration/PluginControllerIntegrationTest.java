@@ -391,6 +391,93 @@ class PluginControllerIntegrationTest {
   }
 
   @Test
+  @Order(11)
+  @DisplayName("E2E: addTestRequest - Queues owner requests in order, plugin fetches them in order")
+  void testAddTestRequest_QueuesInOrder() {
+    // Viewer control off and the second song hidden: neither may block a test request.
+    Show show = showRepository.findByShowToken(TEST_SHOW_TOKEN).orElseThrow();
+    show.getPreferences().setViewerControlEnabled(false);
+    show.getSequences().get(1).setVisible(false);
+    showRepository.update(show);
+
+    // Prime the empty-poll cache: the POST must drop it.
+    given().header("showtoken", TEST_SHOW_TOKEN).when().get("/nextPlaylistInQueue")
+        .then().statusCode(200).body("nextPlaylist", nullValue());
+
+    given()
+        .header("remotetoken", TEST_SHOW_TOKEN)
+        .contentType(ContentType.JSON)
+        .body("{\"sequence\": \"test song 2\"}")
+        .when()
+        .post("/addTestRequest")
+        .then()
+        .statusCode(200)
+        .body("message", equalTo("Success"))
+        .body("sequence", equalTo("Test Song 2"))
+        .body("playlistIndex", equalTo(6))
+        .body("position", equalTo(1));
+
+    given()
+        .header("remotetoken", TEST_SHOW_TOKEN)
+        .contentType(ContentType.JSON)
+        .body("{\"sequence\": \"Test Song 1\"}")
+        .when()
+        .post("/addTestRequest")
+        .then()
+        .statusCode(200)
+        .body("position", equalTo(2));
+
+    Show queued = showRepository.findByShowToken(TEST_SHOW_TOKEN).orElseThrow();
+    assertEquals(2, queued.getRequests().size());
+    assertTrue(queued.getRequests().stream().allMatch(r -> Boolean.TRUE.equals(r.getOwnerRequested())));
+
+    given().header("remotetoken", TEST_SHOW_TOKEN).when().get("/nextPlaylistInQueue")
+        .then().statusCode(200).body("nextPlaylist", equalTo("Test Song 2")).body("playlistIndex", equalTo(6));
+    given().header("remotetoken", TEST_SHOW_TOKEN).when().get("/nextPlaylistInQueue")
+        .then().statusCode(200).body("nextPlaylist", equalTo("Test Song 1")).body("playlistIndex", equalTo(5));
+  }
+
+  @Test
+  @Order(11)
+  @DisplayName("E2E: addTestRequest - Unknown sequence is 404, missing name is 400, nothing queued")
+  void testAddTestRequest_Rejects() {
+    given()
+        .header("showtoken", TEST_SHOW_TOKEN)
+        .contentType(ContentType.JSON)
+        .body("{\"sequence\": \"No Such Song\"}")
+        .when()
+        .post("/addTestRequest")
+        .then()
+        .statusCode(404)
+        .body("message", equalTo("Sequence not found"));
+
+    given()
+        .header("showtoken", TEST_SHOW_TOKEN)
+        .contentType(ContentType.JSON)
+        .body("{}")
+        .when()
+        .post("/addTestRequest")
+        .then()
+        .statusCode(400);
+
+    Show show = showRepository.findByShowToken(TEST_SHOW_TOKEN).orElseThrow();
+    assertTrue(show.getRequests().isEmpty());
+  }
+
+  @Test
+  @Order(11)
+  @DisplayName("E2E: addTestRequest - Requires a valid show token")
+  void testAddTestRequest_NoToken() {
+    given()
+        .contentType(ContentType.JSON)
+        .body("{\"sequence\": \"Test Song 1\"}")
+        .when()
+        .post("/addTestRequest")
+        .then()
+        .statusCode(401);
+  }
+
+  @Test
   @Order(12)
   @DisplayName("E2E: resetAllVotes - Clears only votes")
   void testResetAllVotes_Success() {
