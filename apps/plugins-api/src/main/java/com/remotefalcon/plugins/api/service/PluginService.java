@@ -1435,6 +1435,67 @@ public class PluginService {
         .build();
   }
 
+  /**
+   * Queue a named sequence as an owner request at the back of the queue (for
+   * automated show tests). Matches any synced sequence, hidden or not, by name
+   * or display name, case-insensitively. Skips the viewer rules on purpose:
+   * no location, viewer-control, request-limit or PSA-cadence handling, and no
+   * jukebox stat, so a test never shows up in stats or triggers a PSA.
+   * A single atomic $push, so it can't overwrite a viewer request that lands
+   * at the same moment.
+   */
+  public Response addTestRequest(AddTestRequest request) {
+    if (request == null || StringUtils.isBlank(request.getSequence())) {
+      return Response.status(Response.Status.BAD_REQUEST)
+          .entity(AddTestRequestResponse.builder().message("sequence is required").build())
+          .build();
+    }
+    Show show = showContext.getShow();
+    String wanted = request.getSequence().trim();
+    Optional<Sequence> sequence = Optional.ofNullable(show.getSequences())
+        .orElse(Collections.emptyList())
+        .stream()
+        .filter(Objects::nonNull)
+        .filter(seq -> StringUtils.equalsIgnoreCase(seq.getName(), wanted))
+        .findFirst()
+        .or(() -> Optional.ofNullable(show.getSequences())
+            .orElse(Collections.emptyList())
+            .stream()
+            .filter(Objects::nonNull)
+            .filter(seq -> StringUtils.equalsIgnoreCase(seq.getDisplayName(), wanted))
+            .findFirst());
+    if (sequence.isEmpty()) {
+      return Response.status(Response.Status.NOT_FOUND)
+          .entity(AddTestRequestResponse.builder().message("Sequence not found").sequence(wanted).build())
+          .build();
+    }
+    int position = Optional.ofNullable(show.getRequests())
+        .orElse(Collections.emptyList())
+        .stream()
+        .filter(Objects::nonNull)
+        .map(Request::getPosition)
+        .filter(Objects::nonNull)
+        .max(Integer::compareTo)
+        .orElse(0) + 1;
+    Request newRequest = Request.builder()
+        .sequence(sequence.get())
+        .ownerRequested(true)
+        .position(position)
+        .build();
+    Show.mongoCollection().updateOne(
+        Filters.eq("showToken", show.getShowToken()),
+        Updates.push("requests", newRequest)
+    );
+    LOG.infof("addTestRequest: queued '%s' at position %d for show %s",
+        sequence.get().getName(), position, show.getShowSubdomain());
+    return Response.ok(AddTestRequestResponse.builder()
+        .message("Success")
+        .sequence(sequence.get().getName())
+        .playlistIndex(sequence.get().getIndex())
+        .position(position)
+        .build()).build();
+  }
+
   public PluginResponse purgeQueue() {
     Show show = showContext.getShow();
     Show.mongoCollection().updateOne(

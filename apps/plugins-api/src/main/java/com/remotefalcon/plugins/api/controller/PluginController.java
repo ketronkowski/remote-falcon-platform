@@ -5,6 +5,7 @@ import com.remotefalcon.plugins.api.service.PluginService;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 
 @Path("/")
 public class PluginController {
@@ -77,6 +78,21 @@ public class PluginController {
   @Produces(MediaType.APPLICATION_JSON)
   public RemotePreferenceResponse remotePreferences() {
     return this.pluginService.remotePreferences();
+  }
+
+  /**
+   * Queue a named sequence as an owner request at the back of the queue, for
+   * automated show tests (the pre-show jukebox interrupt check). No location,
+   * viewer-control or request-limit checks: the show token is the gate, as
+   * for every other plugin call. POST, so PollCacheInvalidationFilter drops
+   * the show's cached "queue empty" answer and the next poll sees it.
+   */
+  @POST
+  @Path("/addTestRequest")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  public Response addTestRequest(AddTestRequest request) {
+    return this.pluginService.addTestRequest(request);
   }
 
   @DELETE
