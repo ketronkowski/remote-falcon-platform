@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 
 import useAuth from '../../hooks/useAuth';
 
-import { isExternalViewer } from './helpers/helpers';
+import { isExternalViewer, viewerRedirectTarget } from './helpers/helpers';
 
 /**
  * Guest guard for routes having no auth required
@@ -18,7 +18,8 @@ const ViewerGuard = ({ children }) => {
 
   useEffect(() => {
     if (isExternalViewer()) {
-      navigate('/remote-falcon', { replace: true });
+      const target = viewerRedirectTarget(window.location);
+      if (target) navigate(target, { replace: true });
     }
   }, [isLoggedIn, navigate]);
 
