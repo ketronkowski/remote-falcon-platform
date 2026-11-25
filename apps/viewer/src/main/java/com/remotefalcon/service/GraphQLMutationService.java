@@ -28,10 +28,12 @@ import com.remotefalcon.util.UtmUtil;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import lombok.extern.jbosslog.JBossLog;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -54,6 +56,21 @@ public class GraphQLMutationService {
 
   @Inject
   ViewerMetrics viewerMetrics;
+
+  // Unmanaged jukebox PSA cadence by request "burst" (Kevin 2026-11-25). A burst
+  // is a run of jukebox requests with no gap of psa.burst.gap or longer (the show
+  // has gone back to the Background playlist). In a burst the PSA plays after the
+  // psa.burst.first-th request, then after every psaFrequency-th request after
+  // that (first=3, frequency=5 -> requests 3, 8, 13, ...). Off = the original
+  // "every psaFrequency-th request of the day".
+  @ConfigProperty(name = "remotefalcon.psa.burst.enabled", defaultValue = "true")
+  boolean psaBurstEnabled;
+
+  @ConfigProperty(name = "remotefalcon.psa.burst.first", defaultValue = "3")
+  int psaBurstFirst;
+
+  @ConfigProperty(name = "remotefalcon.psa.burst.gap", defaultValue = "5M")
+  Duration psaBurstGap;
 
 
 
@@ -274,12 +291,7 @@ public class GraphQLMutationService {
         if (jukeboxStat != null && show.get().getPreferences().getPsaEnabled()
             && !show.get().getPreferences().getManagePsa()
             && CollectionUtils.isNotEmpty(show.get().getPsaSequences())) {
-          // Calculate total requests today (existing + 1 we just added)
-          int requestsMadeToday = (int) show.get().getStats().getJukebox().stream()
-              .filter(stat -> stat.getDateTime().isAfter(LocalDateTime.now().withHour(0).withMinute(0).withSecond(0)))
-              .count() + 1; // +1 for the request we just added
-
-          this.handlePsaForJukeboxInline(showSubdomain, show.get(), requestsMadeToday);
+          this.handlePsaForJukeboxInline(showSubdomain, show.get(), this.psaDue(show.get(), LocalDateTime.now()));
         }
         viewerMetrics.recordRequestSuccess();
         return true;
@@ -350,12 +362,7 @@ public class GraphQLMutationService {
           if (jukeboxStat != null && show.get().getPreferences().getPsaEnabled()
               && !show.get().getPreferences().getManagePsa()
               && CollectionUtils.isNotEmpty(show.get().getPsaSequences())) {
-            // Calculate total requests today (existing + 1 we just added for the group)
-            int requestsMadeToday = (int) show.get().getStats().getJukebox().stream()
-                .filter(stat -> stat.getDateTime().isAfter(LocalDateTime.now().withHour(0).withMinute(0).withSecond(0)))
-                .count() + 1; // +1 for the group request we just added
-
-            this.handlePsaForJukeboxInline(showSubdomain, show.get(), requestsMadeToday);
+            this.handlePsaForJukeboxInline(showSubdomain, show.get(), this.psaDue(show.get(), LocalDateTime.now()));
           }
           viewerMetrics.recordRequestSuccess();
           return true;
@@ -720,9 +727,57 @@ public class GraphQLMutationService {
         .findFirst();
   }
 
-  private void handlePsaForJukeboxInline(String showSubdomain, Show show, int requestsMadeToday) {
+  /**
+   * Whether the jukebox request being added now (its stat is not yet in
+   * {@code show.getStats().getJukebox()}) should be followed by a PSA.
+   */
+  boolean psaDue(Show show, LocalDateTime now) {
+    int frequency = show.getPreferences().getPsaFrequency() == null ? 0 : show.getPreferences().getPsaFrequency();
+    List<LocalDateTime> earlier = show.getStats() == null || show.getStats().getJukebox() == null ? List.of()
+        : show.getStats().getJukebox().stream()
+            .filter(stat -> stat != null && stat.getDateTime() != null)
+            .map(Stat.Jukebox::getDateTime)
+            .toList();
+    if (psaBurstEnabled) {
+      return isPsaDueInBurst(earlier, now, psaBurstFirst, frequency, psaBurstGap);
+    }
+    LocalDateTime midnight = now.toLocalDate().atStartOfDay();
+    int requestsMadeToday = (int) earlier.stream().filter(t -> t.isAfter(midnight)).count() + 1; // +1 for this request
+    return frequency > 0 && requestsMadeToday % frequency == 0;
+  }
+
+  /**
+   * Burst cadence: counts this request plus the earlier ones back to the first
+   * gap of {@code gap} or longer, then fires on the {@code first}-th request and
+   * every {@code frequency}-th one after it. frequency <= 0 = only the first PSA.
+   */
+  static boolean isPsaDueInBurst(List<LocalDateTime> earlierRequests, LocalDateTime now, int first, int frequency,
+      Duration gap) {
+    List<LocalDateTime> times = earlierRequests.stream()
+        .filter(t -> !t.isAfter(now))
+        .sorted(Comparator.reverseOrder())
+        .toList();
+    int inBurst = 1; // this request
+    LocalDateTime later = now;
+    for (LocalDateTime t : times) {
+      if (Duration.between(t, later).compareTo(gap) >= 0) {
+        break;
+      }
+      inBurst++;
+      later = t;
+    }
+    if (first <= 0 || inBurst < first) {
+      return false;
+    }
+    if (inBurst == first) {
+      return true;
+    }
+    return frequency > 0 && (inBurst - first) % frequency == 0;
+  }
+
+  private void handlePsaForJukeboxInline(String showSubdomain, Show show, boolean psaDue) {
     // Inline PSA handling that doesn't require re-fetching show
-    if (requestsMadeToday % show.getPreferences().getPsaFrequency() == 0) {
+    if (psaDue) {
       // Honor the Q1 enabled toggle (review item 7): a PSA soft-disabled via
       // the Special Roles tab must not be injected in unmanaged jukebox mode,
       // matching the managed path's enabled filter. nullsFirst on lastPlayed
