@@ -27,7 +27,13 @@ public class PollCacheInvalidationFilter implements ContainerResponseFilter {
 
   @Override
   public void filter(ContainerRequestContext requestContext, ContainerResponseContext responseContext) {
-    if (PollKind.fromPath(requestContext.getUriInfo().getPath()) != null) {
+    String path = requestContext.getUriInfo().getPath();
+    if (PollKind.fromPath(path) != null) {
+      return;
+    }
+    // GET /queue only reads the queue (dashboards poll it every few seconds),
+    // so it must not wipe the empty-poll cache the way a write does.
+    if (path != null && path.endsWith("/queue")) {
       return;
     }
     String showToken = ShowTokenFilter.showToken(requestContext);

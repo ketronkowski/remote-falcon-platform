@@ -48,3 +48,33 @@ export const applyEmbedClass = (
     root.classList.remove(EMBED_CLASS);
   }
 };
+
+/** postMessage type the framing page listens for after a request goes through. */
+export const REQUEST_MESSAGE_TYPE = "rf-request";
+
+/**
+ * In embed mode, tells the framing page that a song request was accepted, so
+ * it can keep its own per-viewer count (the family live page logs which invite
+ * link asked for what). Only the song name goes out, which the page already
+ * shows publicly, so any parent origin may receive it; the parent is
+ * responsible for checking the message's origin. Does nothing outside embed
+ * mode or when the page isn't framed.
+ */
+export const notifyEmbedParent = (
+  embed,
+  sequence,
+  win = typeof window !== "undefined" ? window : null
+) => {
+  if (!embed || !win || !sequence) return false;
+  const parent = win.parent;
+  if (!parent || parent === win) return false;
+  try {
+    parent.postMessage(
+      { type: REQUEST_MESSAGE_TYPE, sequence: String(sequence) },
+      "*"
+    );
+    return true;
+  } catch {
+    return false;
+  }
+};

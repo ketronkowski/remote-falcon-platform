@@ -227,6 +227,32 @@ class PluginServiceTest {
   }
 
   @Test
+  void queue_listsRequestsByPosition_withoutChangingThem() {
+    baseShow.setPlayingNow("Song A");
+    baseShow.setRequests(new ArrayList<>(List.of(
+        Request.builder().position(3).sequence(Sequence.builder().name("third").displayName("Third Song").build()).build(),
+        Request.builder().position(1).sequence(Sequence.builder().name("first").build()).ownerRequested(true).build(),
+        Request.builder().position(2).build())));
+
+    QueueResponse q = pluginService.queue();
+
+    assertEquals("Song A", q.getPlayingNow());
+    assertEquals(2, q.getRequests().size());
+    assertEquals("first", q.getRequests().get(0).getSequence());
+    assertEquals("first", q.getRequests().get(0).getDisplayName());
+    assertEquals(true, q.getRequests().get(0).getOwnerRequested());
+    assertEquals("Third Song", q.getRequests().get(1).getDisplayName());
+    assertEquals(false, q.getRequests().get(1).getOwnerRequested());
+    assertEquals(3, baseShow.getRequests().size());
+  }
+
+  @Test
+  void queue_isEmptyWhenNothingQueued() {
+    baseShow.setRequests(null);
+    assertEquals(0, pluginService.queue().getRequests().size());
+  }
+
+  @Test
   void purgeQueue_and_resetAllVotes_clearData() {
     baseShow.setRequests(new ArrayList<>(List.of(Request.builder().build())));
     baseShow.setVotes(new ArrayList<>(List.of(Vote.builder().sequence(Sequence.builder().name("X").build()).votes(1).build())));
