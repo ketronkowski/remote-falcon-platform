@@ -1496,6 +1496,33 @@ public class PluginService {
         .build()).build();
   }
 
+  /** The queued requests by position, read-only (see PluginController#queue). */
+  public QueueResponse queue() {
+    Show show = showContext.getShow();
+    List<QueueResponse.Item> items = show.getRequests() == null ? List.of()
+        : show.getRequests().stream()
+            .filter(r -> r != null && r.getSequence() != null && r.getSequence().getName() != null)
+            .sorted(Comparator.comparing(Request::getPosition, Comparator.nullsLast(Comparator.naturalOrder())))
+            .map(r -> {
+              Sequence seq = r.getSequence();
+              String display = seq.getDisplayName() == null || seq.getDisplayName().isBlank()
+                  ? seq.getName() : seq.getDisplayName();
+              return QueueResponse.Item.builder()
+                  .position(r.getPosition())
+                  .sequence(seq.getName())
+                  .displayName(display)
+                  .ownerRequested(Boolean.TRUE.equals(r.getOwnerRequested()))
+                  .song(PluginQueueHelper.isSongLike(show, seq.getName()))
+                  .build();
+            })
+            .toList();
+    return QueueResponse.builder()
+        .playingNow(show.getPlayingNow())
+        .playingNext(show.getPlayingNext())
+        .requests(items)
+        .build();
+  }
+
   public PluginResponse purgeQueue() {
     Show show = showContext.getShow();
     Show.mongoCollection().updateOne(

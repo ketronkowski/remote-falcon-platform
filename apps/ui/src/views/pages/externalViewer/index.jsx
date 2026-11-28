@@ -27,7 +27,7 @@ import { jukeboxQueueElements, playingSequenceElement } from './helpers/nowPlayi
 import { isSequenceUnavailable as checkSequenceUnavailable } from './helpers/sequenceAvailability';
 import { UNAVAILABLE_HINT_DEFAULT_CSS, sequenceRowContent, unavailableRowProps } from './helpers/unavailableRow';
 import { readUtmParams, stripUtmFromAddressBar } from './helpers/utmParams';
-import { applyEmbedClass, readEmbedParams } from './helpers/embedMode';
+import { applyEmbedClass, notifyEmbedParent, readEmbedParams } from './helpers/embedMode';
 import LocationRecoveryControl from './LocationRecoveryControl';
 import ReconnectingNotice from './ReconnectingNotice';
 import { markViewerPageStatsRecorded, viewerPageStatsAlreadyRecorded } from './helpers/viewerPageStatsOnce';
@@ -366,6 +366,9 @@ const ExternalViewerPage = () => {
         locationPermissionRef.current,
         enteredCodeFor(show?.preferences?.locationCheckMethod, enteredLocationCode),
         (response) => {
+          if (response?.success) {
+            notifyEmbedParent(embedParams.embed, sequenceDisplayName != null ? sequenceDisplayName : sequenceName);
+          }
           showViewerMessage(response);
         }
       );
