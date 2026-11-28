@@ -234,6 +234,7 @@ public class GraphQLMutationService {
             .sequence(requestedSequence.get())
             .ownerRequested(false)
             .viewerRequested(StringUtils.isEmpty(clientIp) ? "" : clientIp)
+            .via(requestVia(existingShow, locationCode))
             .position(Math.toIntExact(leaderSequence.isPresent() ? nextPosition + 1 : nextPosition))
             .build();
         // #175 — the stats-excluded list is documented as covering requests
@@ -327,6 +328,7 @@ public class GraphQLMutationService {
                 .sequence(sequencesInGroup.get(i))
                 .ownerRequested(false)
                 .viewerRequested(StringUtils.isEmpty(clientIp) ? "" : clientIp)
+                .via(requestVia(existingShow, locationCode))
                 .position(Math.toIntExact(startPosition + i))
                 .build();
             requests.add(request);

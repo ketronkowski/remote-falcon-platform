@@ -589,7 +589,7 @@ class GraphQLMutationServiceTest {
 
       // Verify DB operations were called with correct data
       verify(showRepository).appendRequestAndJukeboxStat(eq("sub"), argThat(req ->
-          req.getPosition() == 1 && "1.2.3.4".equals(req.getViewerRequested())
+          req.getPosition() == 1 && "1.2.3.4".equals(req.getViewerRequested()) && "GPS".equals(req.getVia())
       ), argThat(stat ->
           "song-a".equals(stat.getName())
       ));

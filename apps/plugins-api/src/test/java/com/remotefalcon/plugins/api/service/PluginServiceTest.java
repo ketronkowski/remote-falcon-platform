@@ -230,7 +230,7 @@ class PluginServiceTest {
   void queue_listsRequestsByPosition_withoutChangingThem() {
     baseShow.setPlayingNow("Song A");
     baseShow.setRequests(new ArrayList<>(List.of(
-        Request.builder().position(3).sequence(Sequence.builder().name("third").displayName("Third Song").build()).build(),
+        Request.builder().position(3).sequence(Sequence.builder().name("third").displayName("Third Song").build()).via("CODE").build(),
         Request.builder().position(1).sequence(Sequence.builder().name("first").build()).ownerRequested(true).build(),
         Request.builder().position(2).build())));
 
@@ -243,6 +243,8 @@ class PluginServiceTest {
     assertEquals(true, q.getRequests().get(0).getOwnerRequested());
     assertEquals("Third Song", q.getRequests().get(1).getDisplayName());
     assertEquals(false, q.getRequests().get(1).getOwnerRequested());
+    assertEquals("CODE", q.getRequests().get(1).getVia());
+    assertNull(q.getRequests().get(0).getVia());
     assertEquals(3, baseShow.getRequests().size());
   }
 

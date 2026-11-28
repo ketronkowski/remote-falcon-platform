@@ -34,5 +34,7 @@ public class QueueResponse {
     private Boolean ownerRequested;
     /** False for PSAs and other non-song items FPP still plays. */
     private Boolean song;
+    /** GPS (driveway) or CODE (live stream page daily code); null when not recorded. */
+    private String via;
   }
 }
