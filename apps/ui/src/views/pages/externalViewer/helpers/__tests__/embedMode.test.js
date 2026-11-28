@@ -1,6 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { applyEmbedClass, EMBED_CLASS, readEmbedParams } from "../embedMode";
+import {
+  applyEmbedClass,
+  EMBED_CLASS,
+  notifyEmbedParent,
+  readEmbedParams,
+  REQUEST_MESSAGE_TYPE,
+} from "../embedMode";
 
 describe("readEmbedParams", () => {
   it("is off for a normal visit", () => {
@@ -45,5 +51,36 @@ describe("applyEmbedClass", () => {
 
   it("does nothing without a root", () => {
     expect(() => applyEmbedClass(true, null)).not.toThrow();
+  });
+});
+
+describe("notifyEmbedParent", () => {
+  const framed = () => {
+    const parent = { postMessage: vi.fn() };
+    return { win: { parent }, parent };
+  };
+
+  it("posts the song to the framing page in embed mode", () => {
+    const { win, parent } = framed();
+    expect(notifyEmbedParent(true, "Jingle Bells", win)).toBe(true);
+    expect(parent.postMessage).toHaveBeenCalledWith(
+      { type: REQUEST_MESSAGE_TYPE, sequence: "Jingle Bells" },
+      "*"
+    );
+  });
+
+  it("does nothing outside embed mode, unframed, or without a song", () => {
+    const { win, parent } = framed();
+    expect(notifyEmbedParent(false, "Jingle Bells", win)).toBe(false);
+    expect(notifyEmbedParent(true, "", win)).toBe(false);
+    const top = {};
+    top.parent = top;
+    expect(notifyEmbedParent(true, "Jingle Bells", top)).toBe(false);
+    expect(parent.postMessage).not.toHaveBeenCalled();
+  });
+
+  it("swallows a postMessage failure", () => {
+    const win = { parent: { postMessage: () => { throw new Error("x"); } } };
+    expect(notifyEmbedParent(true, "Song", win)).toBe(false);
   });
 });

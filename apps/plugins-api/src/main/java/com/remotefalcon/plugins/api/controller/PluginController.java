@@ -20,6 +20,18 @@ public class PluginController {
     return this.pluginService.nextPlaylistInQueue();
   }
 
+  /**
+   * The request queue in play order, without changing it: for show dashboards
+   * (the Show Control "Up next" list). Never use /nextPlaylistInQueue to read
+   * the queue, since that call removes the song it returns.
+   */
+  @GET
+  @Path("/queue")
+  @Produces(MediaType.APPLICATION_JSON)
+  public QueueResponse queue() {
+    return this.pluginService.queue();
+  }
+
   @POST
   @Path("/updatePlaylistQueue")
   @Produces(MediaType.APPLICATION_JSON)
