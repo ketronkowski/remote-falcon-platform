@@ -1513,6 +1513,7 @@ public class PluginService {
                   .displayName(display)
                   .ownerRequested(Boolean.TRUE.equals(r.getOwnerRequested()))
                   .song(PluginQueueHelper.isSongLike(show, seq.getName()))
+                  .via(r.getVia())
                   .build();
             })
             .toList();
